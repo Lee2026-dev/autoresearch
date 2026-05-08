@@ -1,0 +1,34 @@
+task_source:
+  type: local
+  file: .autoresearch/prd.json
+  # github:
+  #   repo: owner/repo
+  #   label: autoresearch
+  #   sync_on_start: true
+
+ac_test_dir: ".autoresearch/ac-tests"
+
+# global_gates:
+#   - name: secret-scan
+#     command: "git diff HEAD~1 | grep -iE '(password|secret|api_key)\\s*=' && exit 1 || exit 0"
+#     optional: true
+
+scopes:
+  frontend:
+    root: "."
+    quality_gates:
+      - name: format
+        command: "prettier --check 'src/**/*.{ts,tsx}'"
+      - name: lint
+        command: "eslint src/ --max-warnings 0"
+      - name: typecheck
+        command: "tsc --noEmit"
+      - name: test
+        command: "jest --coverage --coverageThreshold='{\"global\":{\"lines\":70}}' --ci"
+      - name: security
+        command: "npm audit --audit-level=high"
+      - name: mutation
+        command: "stryker run"
+        optional: true
+    guard:
+      command: "jest --ci --passWithNoTests"

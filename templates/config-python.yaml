@@ -1,0 +1,48 @@
+task_source:
+  type: local             # local | github
+  file: .autoresearch/prd.json
+  # github:
+  #   repo: owner/repo
+  #   label: autoresearch
+  #   sync_on_start: true
+
+# AC tests for all scopes are stored here — never pollutes project directories
+ac_test_dir: ".autoresearch/ac-tests"
+
+# Global gates: run for every USR regardless of scope (optional)
+# global_gates:
+#   - name: secret-scan
+#     command: "git diff HEAD~1 | grep -iE '(password|secret|api_key)\\s*=' && exit 1 || exit 0"
+#     optional: true
+
+scopes:
+  backend:
+    root: "."             # directory where gate commands are executed
+    quality_gates:
+      - name: format
+        command: "ruff format --check ."
+      - name: lint
+        command: "ruff check ."
+      - name: typecheck
+        command: "mypy --strict ."
+      - name: test
+        command: "pytest --cov --cov-fail-under=70"
+      - name: security
+        command: "bandit -r . -ll"
+      - name: complexity
+        command: "ruff check --select C90 ."
+      - name: mutation
+        command: "mutmut run"
+        optional: true
+    guard:
+      command: "pytest -x -q"
+
+  # frontend:             # uncomment when frontend development starts
+  #   root: "frontend/"
+  #   quality_gates:
+  #     - name: lint      command: "eslint src/ --max-warnings 0"
+  #     - name: typecheck command: "tsc --noEmit"
+  #     - name: test      command: "jest --coverage --ci"
+  #     - name: security  command: "npm audit --audit-level=high"
+  #   guard:
+  #     command: "jest --ci --passWithNoTests"

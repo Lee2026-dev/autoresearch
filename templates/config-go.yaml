@@ -1,0 +1,31 @@
+task_source:
+  type: local
+  file: .autoresearch/prd.json
+  # github:
+  #   repo: owner/repo
+  #   label: autoresearch
+  #   sync_on_start: true
+
+ac_test_dir: ".autoresearch/ac-tests"
+
+# global_gates:
+#   - name: secret-scan
+#     command: "git diff HEAD~1 | grep -iE '(password|secret|api_key)\\s*=' && exit 1 || exit 0"
+#     optional: true
+
+scopes:
+  backend:
+    root: "."
+    quality_gates:
+      - name: format
+        command: "gofmt -l . | grep -q . && exit 1 || exit 0"
+      - name: lint
+        command: "golangci-lint run ./..."
+      - name: test
+        command: "go test -coverprofile=coverage.out ./... && go tool cover -func=coverage.out | grep total | awk '{if ($3+0 < 70) exit 1}'"
+      - name: security
+        command: "gosec ./..."
+      - name: vet
+        command: "go vet ./..."
+    guard:
+      command: "go test -short ./..."

@@ -1,0 +1,14 @@
+[
+  {
+    "id": "USR-001",
+    "title": "Example: implement user registration endpoint",
+    "done": false,
+    "source": "local",
+    "priority": 1,
+    "acceptance_criteria": [
+      "POST /register with valid email+password returns 201 and user ID",
+      "Duplicate email returns 409 without creating a user",
+      "Password shorter than 8 characters returns 400"
+    ]
+  }
+]
