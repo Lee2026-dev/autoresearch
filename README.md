@@ -139,7 +139,8 @@ PHASE 0  Scope 预检
 ┌─────────────────────────────────────────────────────┐
 │ PHASE 6  经验沉淀                                   │
 │  提炼 lessons → 合并到 CLAUDE.md [autoresearch]     │
-│  （智能去重压缩，≤500 token，不截断）               │
+│  按 scope 分区存储，每个分区独立 300 token 上限     │
+│  超限 → 整区压缩 + 归档到 .autoresearch/lessons/    │
 │  追加到 .autoresearch/tasks/USR-001/progress.md     │
 │  （人类可读日志，永远不传给 Agent）                  │
 └─────────────────────────────────────────────────────┘
@@ -191,6 +192,27 @@ USR-003  scope: backend   feature_id: USR-003   "数据导出功能"
 ### 四、中断恢复
 
 任何阶段中断后，重新运行 `/autoresearch`——读取 `.autoresearch/tasks/<USR-ID>/state.json` 的 `current_phase` 字段从断点续跑，不会从头开始。
+
+### 五、综合评分机制
+
+Reviewer 完成审查后，会基于 `CLAUDE.md` 中的 `Scoring Criteria` 计算综合评分：
+
+```
+┌─────────────────────────────────────────────────────┐
+│              综合评分 (0-100分)                     │
+├─────────────────────────────────────────────────────┤
+│ AC 验收 (50%)                                       │
+│ 代码质量 (20%)                                      │
+│ 架构约束 (20%)                                      │
+│ 设计一致性 (10%)                                    │
+├─────────────────────────────────────────────────────┤
+│ ≥ 80 分 → PASS → 继续到 PHASE 6                    │
+│ < 80 分 → FAIL → 打回 Coder 修复 → 重新 Review     │
+│ 默认最多 10 次循环（可配置）                        │
+└─────────────────────────────────────────────────────┘
+```
+
+循环次数可通过环境变量 `AUTORESEARCH_MAX_REVIEW_LOOPS` 覆盖。
 
 ---
 
@@ -301,6 +323,8 @@ templates/
     logs/
       global.tsv                     ← 全局追踪日志
       USR-001.tsv                    ← 单任务日志
+    lessons/
+      archive.md                     ← 归档的超限经验（压缩前后对比）
 ```
 
 ---
@@ -334,7 +358,7 @@ templates/
 
 ---
 
-## 验收机制（五层防线）
+## 验收机制（六层防线）
 
 ```
 层 1  AC 测试全部 PASS
@@ -344,13 +368,17 @@ templates/
 层 2  变异测试通过（可选）
       验证 AC 测试本身不是造假（mutmut / stryker）
 
-层 3  Reviewer AC 验收矩阵全部 ✅
+层 3  Reviewer 综合评分 ≥ 80 分
+      评分维度：AC验收50% + 代码质量20% + 架构约束20% + 设计一致性10%
+      < 80 分打回修改，最多 10 次循环
+
+层 4  Reviewer AC 验收矩阵全部 ✅
       独立子 Agent，只看 diff + design.md，不共享 Coder context
 
-层 4  Architecture Invariants 全部 ✅
-      Reviewer 对比 CLAUDE.md 中的架构约束，违反即阻断
+层 5  Architecture Invariants + Quality Gate Rules 全部 ✅
+      Reviewer 对比 CLAUDE.md 中的约束，违反即阻断
 
-层 5  人工 PR Review（最终防线，不可绕过）
+层 6  人工 PR Review（最终防线，不可绕过）
 ```
 
 ---
