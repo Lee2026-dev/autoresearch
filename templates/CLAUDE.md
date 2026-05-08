@@ -11,26 +11,60 @@
 ---
 
 <!-- autoresearch:start — managed by /autoresearch, do not edit manually -->
-## [autoresearch] Lessons
-
-### Architecture Invariants
-<!-- Project-level architectural constraints. Initialized by /autoresearch:plan on first run.
-     Humans maintain this list. Agents MAY append but MUST NOT delete entries.
-     Reviewer enforces every invariant on each diff — a violation blocks the PR. -->
+## [autoresearch] Core Invariants
+<!-- 始终加载。项目级架构约束，Reviewer 每次必查。
+     由 /autoresearch:plan 初始化，人工可编辑，Agent 仅可追加。 -->
 - (example) controllers/ may only call services/ — no business logic in controllers
 - (example) models/ must not import from services/ or controllers/
 - (example) all external I/O (DB, HTTP, filesystem) must go through the repository layer
 - (example) no circular imports between modules
 
-### Project Architecture
+## [autoresearch] Known Pitfalls
+<!-- 按 scope 分区，按需加载。
+     UMA 只加载当前 task.scope 对应的 subsection。
+     每个 scope 分区独立 300 token 上限，超限后整区压缩。
+     格式：[{scope}] < concise lesson, ensure LLM easily understands > -->
+
+### Common
+- [common] <lesson>
+
+### Backend
+- [backend] <lesson>
+
+### Frontend
+- [frontend] <lesson>
+
+## [autoresearch] Verified Patterns
+<!-- 按 scope 分区，按需加载。
+     UMA 只加载当前 task.scope 对应的 subsection。
+     每个 scope 分区独立 300 token 上限，超限后整区压缩。
+     格式：[{scope}] < concise lesson, ensure LLM easily understands > -->
+
+### Common
+- [common] <lesson>
+
+### Backend
+- [backend] <lesson>
+
+### Frontend
+- [frontend] <lesson>
+
+## [autoresearch] Quality Standards
+<!-- 按 scope 分区，按需加载。
+     UMA 只加载当前 task.scope 对应的 subsection。
+     每个 scope 分区独立 300 token 上限，超限后整区压缩。
+     格式：[{scope}] < concise lesson, ensure LLM easily understands > -->
+
+### Common
+- [common] <lesson>
+
+### Backend
+- [backend] <lesson>
+
+### Frontend
+- [frontend] <lesson>
+
+## [autoresearch] Project Architecture
+<!-- 由 /autoresearch:plan 初始化时扫描生成。始终加载。 -->
 <Populated by /autoresearch:plan on first run via codebase scan.>
-
-### Known Pitfalls
-<Populated by /autoresearch as pitfalls are discovered.>
-
-### Quality Standards
-<Project-specific quality requirements beyond the base gates.>
-
-### Verified Patterns
-<Coding patterns confirmed to work well in this codebase.>
 <!-- autoresearch:end -->
