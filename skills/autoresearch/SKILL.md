@@ -319,7 +319,8 @@ siblings = all entries in prd.json where feature_id == current feature_id
 If any sibling has done: false:
   Print: "[autoresearch] USR-<X> [<scope>] done. Waiting for sibling tasks before creating PR:"
   For each pending sibling: print "  - <USR-ID> [<scope>]: <title> (status: pending/in_progress)"
-  Reset state.json to PHASE_1_SELECT and continue the loop.
+  DO NOT reset state.json — the completed task keeps its current_phase.
+  Continue the loop. The orchestrator will naturally pick up the next pending task from prd.json.
 
 If all siblings are done:
   Proceed to spawn autoresearch-ship.
