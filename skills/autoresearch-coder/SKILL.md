@@ -15,21 +15,36 @@ CLAUDE.md is auto-loaded — read it for project conventions, known pitfalls, an
 
 Triggered by instruction: *"Write design.md and AC test stubs."*
 
+You are already on the correct feature branch — do NOT create or switch branches.
+
 1. Read the task title, AC list, and project architecture summary provided.
 2. Write `design.md` to `.autoresearch/tasks/<USR-ID>/iterations/<NNN>/design.md`:
    - Which files will change and why
    - Data flow for this feature
    - Key design decisions
-3. Write the AC test file at the path provided by the orchestrator (`<ac_test_file>`, inside `.autoresearch/ac-tests/`) — one test function per AC:
+3. **Create module stub files** for every module the AC tests will import, if they do not already exist:
+   - Stub files must make imports resolve but raise `NotImplementedError` for all functions
+   - This ensures AC tests fail with `NotImplementedError` (expected) rather than `ImportError` (uncontrolled)
+   - Example (Python):
+     ```python
+     # backend/api/auth.py  ← stub, created only if file does not exist
+     def register(email: str, password: str):
+         raise NotImplementedError
+
+     def login(email: str, password: str):
+         raise NotImplementedError
+     ```
+   - Do not overwrite existing implementation files — only create missing ones.
+4. Write the AC test file at the path provided by the orchestrator (`<ac_test_file>`, inside `.autoresearch/ac-tests/`) — one test function per AC:
    - Name clearly describes the AC (e.g., `test_duplicate_email_returns_409`)
    - Contains a real assertion — never `assert True` or `pass`
    - Imports follow existing test suite conventions
    - **All tests fail at this point** — this is correct and expected
-4. Do not write any business logic.
-5. Commit:
+5. Do not write any business logic.
+6. Commit:
    ```
-   git add <design.md> <test file>
-   git commit -m "test(<USR-ID>): add AC test stubs — <brief description>"
+   git add <design.md> <stub files> <test file>
+   git commit -m "chore(<USR-ID>): design doc, module stubs, and AC test stubs"
    ```
 
 ---
@@ -37,6 +52,8 @@ Triggered by instruction: *"Write design.md and AC test stubs."*
 ## Sub-task B: Implement Business Logic
 
 Triggered by instruction: *"Implement. The AC tests already exist — make them pass."*
+
+You are already on the correct feature branch — do NOT create or switch branches.
 
 1. Read `design.md`. Understand exactly which files change and why.
 2. Read `<ac_test_dir>/test_<USR-ID>.<ext>`. These are your acceptance criteria — make all of them pass.
@@ -60,8 +77,9 @@ Triggered by instruction: *"Implement. The AC tests already exist — make them 
 
 ## Sub-task C: Apply Fix
 
-Triggered by instruction: *"Fix gate failure."*
+Triggered by instruction: *"Fix gate failure."* OR *"Fix review issues."*
 
+**For "Fix gate failure"** (original behavior):
 1. Read the full gate error output provided.
 2. Identify root cause and classify:
    - **Style/format** → run auto-fix command (`ruff format`, `eslint --fix`, etc.)
@@ -74,6 +92,22 @@ Triggered by instruction: *"Fix gate failure."*
 5. Commit:
    ```
    git commit -m "fix(<USR-ID>): <what was fixed> (gate: <name>)"
+   ```
+
+**For "Fix review issues"** (new behavior):
+1. Read the `review.md` file from the iteration directory.
+2. Extract the "Issues Found" section — each item has specific file:line reference.
+3. Classify each issue by type:
+   - **Architecture invariant violation** → refactor to correct layer (e.g., move logic from controllers/ to services/)
+   - **SOLID violation** → extract class/function to proper separation
+   - **Code quality** → refactor per CLAUDE.md conventions (functions > 40 lines, duplication, magic values)
+   - **Security** → fix vulnerability per security best practices
+   - **Design conformance** → adjust implementation to match design.md
+4. Apply fixes in order — start with architecture, then quality, then security.
+5. Do NOT refactor beyond what the issues require — no unrelated improvements.
+6. Commit:
+   ```
+   git commit -m "fix(<USR-ID>): resolve review issues (<issue count> items)"
    ```
 
 If you cannot determine the fix, write `fix-blocker.md` in the iteration directory describing what you tried, then stop.

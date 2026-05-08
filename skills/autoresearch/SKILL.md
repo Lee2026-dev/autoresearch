@@ -18,6 +18,37 @@ Verify before starting:
 
 ---
 
+## PHASE 0 — Scope Pre-check
+
+Before entering the main loop, validate that tooling is available for every scope referenced by pending tasks.
+
+For each scope referenced in `prd.json` (among `done: false` entries):
+
+```
+scope_config = config.yaml.scopes[scope_name]
+
+If scope does not exist in config.yaml:
+  Stop. Print: "[autoresearch] Scope '<X>' used in prd.json but not defined in config.yaml.
+  Run /autoresearch:plan to add it."
+
+If scope.quality_gates is empty or missing:
+  Log warning: "[autoresearch] Warning: no quality gates configured for scope '<X>' — gates will be skipped."
+  Guard still runs if defined.
+
+If scope.guard is missing:
+  Log warning: "[autoresearch] Warning: no guard configured for scope '<X>'."
+
+For each gate command in scope.quality_gates:
+  tool = first word of command (e.g., "ruff" from "ruff check .")
+  Run: command -v <tool>
+  If not found:
+    If gate has optional: true → log warning and skip gate
+    Else → Stop. Print: "[autoresearch] Gate '<gate-name>' requires '<tool>' which is not installed.
+    Install it or update .autoresearch/config.yaml."
+```
+
+---
+
 ## Scope Resolution
 
 Every USR has a `"scope"` field (e.g., `"backend"` or `"frontend"`). Before each phase, resolve the active scope's configuration from `config.yaml`:
@@ -44,14 +75,37 @@ Repeat until all tasks have `"done": true`.
 
 ### PHASE 1 — Task Selection
 
-Read `prd.json`. Select lowest-`priority` `"done": false` task.
+Read `prd.json`. Filter to `"done": false` tasks.
+
+**depends_on check**: For each candidate task, check its `depends_on` list. Skip any task where a listed dependency has `"done": false`. If all remaining tasks are blocked by unmet dependencies, stop and print:
+```
+[autoresearch] Blocked: all pending tasks have unmet dependencies.
+  USR-002 waiting for: USR-001
+Run /autoresearch again after merging the blocking PR.
+```
+
+Select the lowest-`priority` unblocked task.
 
 Read `.autoresearch/tasks/<USR-ID>/state.json`. If `current_phase` is not `PHASE_1_SELECT`, a prior run was interrupted — **resume from that phase**.
+
+**Feature branch creation**: Resolve the feature branch name from `prd.json`:
+```bash
+feature_id="<prd_entry.feature_id>"   # e.g. "user-auth" or "USR-003"
+branch_name="feat/${feature_id}"       # e.g. "feat/user-auth"
+
+current=$(git branch --show-current)
+if [ "$current" != "$branch_name" ]; then
+  # checkout existing branch (subsequent USR) or create new one (first USR)
+  git checkout "$branch_name" 2>/dev/null || git checkout -b "$branch_name"
+fi
+```
 
 Update `state.json`:
 ```json
 {
   "active_task_id": "<USR-ID>",
+  "feature_id": "<feature_id>",
+  "branch_name": "<branch_name>",
   "current_phase": "PHASE_2_PLAN",
   "iteration": <N+1>,
   "fixer_attempts": 0,
@@ -60,7 +114,7 @@ Update `state.json`:
 }
 ```
 
-Print: `[autoresearch] Starting <USR-ID> [<scope>]: <title> (iteration N)`
+Print: `[autoresearch] Starting <USR-ID> [<scope>]: <title> (iteration N, branch: <branch_name>)`
 
 ---
 
@@ -132,8 +186,13 @@ Spawn sub-agent with **autoresearch-reviewer** skill. Provide:
 
 Sub-agent writes `.autoresearch/tasks/<USR-ID>/iterations/<NNN>/review.md`.
 
-If any AC is `❌`:
-- Spawn **autoresearch-coder** with review notes
+If Overall == NEEDS_WORK OR any AC is `❌`:
+- Read the full `review.md` (especially "Issues Found" section)
+- Spawn **autoresearch-coder** with instruction: "Fix review issues"
+- Pass the complete review context including:
+  - "Issues Found" list with file:line references
+  - Architecture invariant violations
+  - AC matrix with ❌ items
 - Re-run PHASE 4 after fix
 - Maximum 2 review→fix cycles
 
@@ -163,15 +222,36 @@ Update `state.json`: `current_phase → PHASE_7_SHIP`
 
 ---
 
-### PHASE 7 — Ship
+### PHASE 7 — Ship (feature-level)
 
-Spawn sub-agent with **autoresearch-ship** skill. Provide task title, scope, AC, `gate_results.json` summary, `review.md`, USR-ID, and iteration number.
+First, mark the current USR as `"done": true` in `prd.json` and update its `status` to `"done"`.
+
+**Check if the entire feature is ready to ship:**
+
+```
+feature_id = current_task.feature_id
+siblings = all entries in prd.json where feature_id == current feature_id
+
+If any sibling has done: false:
+  Print: "[autoresearch] USR-<X> [<scope>] done. Waiting for sibling tasks before creating PR:"
+  For each pending sibling: print "  - <USR-ID> [<scope>]: <title> (status: pending/in_progress)"
+  Reset state.json to PHASE_1_SELECT and continue the loop.
+
+If all siblings are done:
+  Proceed to spawn autoresearch-ship.
+```
+
+Spawn sub-agent with **autoresearch-ship** skill. Provide:
+- `feature_id` and derived feature title
+- `branch_name` from `state.json`
+- All sibling USR titles, scopes, and AC lists
+- `gate_results.json` summaries for all USRs
+- `review.md` files for all USRs
 
 After PR URL confirmed:
-- Set `"done": true` in `prd.json`
 - Reset `state.json` to `PHASE_1_SELECT`
 
-Print: `[autoresearch] <USR-ID> [<scope>] complete. PR: <url>`
+Print: `[autoresearch] Feature <feature_id> complete. PR: <url>`
 
 ---
 
@@ -179,8 +259,8 @@ Print: `[autoresearch] <USR-ID> [<scope>] complete. PR: <url>`
 
 ```
 [autoresearch] All tasks complete.
-  USR-001 [backend]:  2 iterations — PR #23
-  USR-002 [frontend]: 1 iteration  — PR #24
+  feat/user-auth:  USR-001 [backend] + USR-002 [frontend] — PR #23
+  feat/usr-003:    USR-003 [backend] — PR #24
 CLAUDE.md updated. Review PRs to merge.
 ```
 
