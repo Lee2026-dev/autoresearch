@@ -194,24 +194,56 @@ If `fixer_attempts >= 3`: revert, reset to `PHASE_2_PLAN`, increment iteration.
 
 ### PHASE 5 — Code Review
 
-Spawn sub-agent with **autoresearch-reviewer** skill. Provide:
+**Get max review loops from environment:**
+```
+max_review_loops = ${AUTORESEARCH_MAX_REVIEW_LOOPS:-10}
+```
+
+**Initialize review loop counter if not exists:**
+```
+If state.json does not have "review_loop_count":
+  Add "review_loop_count": 0
+  Add "last_review_score": null
+```
+
+**Spawn sub-agent with** **autoresearch-reviewer** skill. Provide:
 - `git diff HEAD~1`
 - `design.md` from current iteration
 - AC list and scope from `prd.json`
 
 Sub-agent writes `.autoresearch/tasks/<USR-ID>/iterations/<NNN>/review.md`.
 
-If Overall == NEEDS_WORK OR any AC is `❌`:
-- Read the full `review.md` (especially "Issues Found" section)
-- Spawn **autoresearch-coder** with instruction: "Fix review issues"
-- Pass the complete review context including:
-  - "Issues Found" list with file:line references
-  - Architecture invariant violations
-  - AC matrix with ❌ items
-- Re-run PHASE 4 after fix
-- Maximum 2 review→fix cycles
+**Extract score from review.md:**
+- Read the `## 综合评分: X/100` line
+- Extract the numeric score
 
-Update `state.json`: `current_phase → PHASE_6_MEMORY`
+**If score ≥ 80 (PASS):**
+- Print: `[autoresearch] Review score: {score}/100 - PASS`
+- Update `state.json`: `current_phase → PHASE_6_MEMORY`, `last_review_score → {score}`
+- Continue to PHASE 6
+
+**If score < 80 (FAIL):**
+- Increment `review_loop_count` in state.json
+- Print: `[autoresearch] Review score: {score}/100 - FAIL. Review loop {N}/{max_review_loops}`
+
+- If `review_loop_count < max_review_loops`:
+  - Read the full `review.md` (especially "Issues Found" section)
+  - Spawn **autoresearch-coder** with instruction:
+    ```
+    Fix review issues. Score was {score}/100 (failed). Issues:
+    - "Issues Found" list with file:line references
+    - Architecture invariant violations
+    - AC matrix with ❌ items
+    - Any quality gate rule violations
+    ```
+  - After fix commit: **re-run PHASE 4** (quality gates)
+  - Then **re-run PHASE 5** (review) → re-evaluate score
+
+- If `review_loop_count ≥ max_review_loops`:
+  - Print: `[autoresearch] Review score: {score}/100 - FAIL after {max_review_loops} review loops. Marking as blocker, requires human intervention.`
+  - Update `state.json`: `current_phase → PHASE_5_BLOCKED`
+  - Mark USR as "blocked" in prd.json
+  - Report to user for manual resolution
 
 ---
 

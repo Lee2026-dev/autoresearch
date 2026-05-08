@@ -223,6 +223,8 @@ Write initial `state.json`:
   "current_phase": "PHASE_1_SELECT",
   "iteration": 0,
   "fixer_attempts": 0,
+  "review_loop_count": 0,
+  "last_review_score": null,
   "last_commit": null,
   "started_at": null
 }

@@ -104,6 +104,37 @@ Any ❌ here → set Overall to `NEEDS_WORK` and add to Issues Found with `file:
 
 ---
 
+## Scoring Procedure
+
+Follow the `## [autoresearch] Scoring Criteria` section in CLAUDE.md to calculate the review score.
+
+### Step 1: Calculate AC Score (50 max)
+- Count total AC items from prd.json
+- Count passed AC items (those with ✅ in verification matrix)
+- AC Score = (passed / total) × 50
+
+### Step 2: Calculate Code Quality Score (20 max)
+- 函数 ≤ 40 行: 10 if pass, 0 if any function exceeds 40 lines
+- 循环复杂度 ≤ 15: 5 if pass, 0 if any function exceeds 15
+- 无明显重复代码: 5 if pass, 0 if significant duplication found
+
+### Step 3: Calculate Architecture Score (20 max)
+- Core Invariants: (passed count / total count) × 10
+- Quality Gate Rules: (passed count / total count) × 10
+
+### Step 4: Calculate Design Conformance Score (10 max)
+- 实现符合 design.md: 5 if pass, 0 if significant deviation
+- 无意外变更: 5 if pass, 0 if changes outside agreed scope
+
+### Step 5: Calculate Total Score
+- Total = AC Score + Code Quality Score + Architecture Score + Design Score
+
+### Step 6: Determine Overall
+- ≥ 80: PASS
+- < 80: FAIL
+
+---
+
 ## Output
 
 Write structured `review.md` to `.autoresearch/tasks/<USR-ID>/iterations/<NNN>/review.md`:
@@ -114,10 +145,33 @@ Write structured `review.md` to `.autoresearch/tasks/<USR-ID>/iterations/<NNN>/r
 ## AC Verification Matrix
 <table>
 
-## Overall: APPROVED | NEEDS_WORK
+## Review Score
+
+### AC 验收 (50/50)
+- Total AC: N
+- Passed: M
+- Score: X/50
+
+### 代码质量 (20/20)
+- 函数长度 ≤ 40 行: ✅/❌ = X/10
+- 循环复杂度 ≤ 15: ✅/❌ = X/5
+- 无重复代码: ✅/❌ = X/5
+
+### 架构约束 (20/20)
+- Core Invariants: X/Y 通过 = X/10
+- Quality Gate Rules: X/Y 通过 = X/10
+
+### 设计一致性 (10/10)
+- 实现符合 design.md: ✅/❌ = X/5
+- 无意外变更: ✅/❌ = X/5
+
+---
+
+## 综合评分: X/100
+## 判定: PASS | FAIL
 
 ## Issues Found
-<If NEEDS_WORK: numbered list, specific and actionable, with file:line references.>
+<If FAIL: numbered list, specific and actionable, with file:line references.>
 
 ## Positive Observations
 <Patterns worth reinforcing in CLAUDE.md — optional.>
@@ -130,5 +184,6 @@ Write structured `review.md` to `.autoresearch/tasks/<USR-ID>/iterations/<NNN>/r
 - Output only `review.md`. Do not modify source code or test files.
 - Be specific: "auth.py line 47: hardcoded secret key" not "security issues exist".
 - Do not re-flag style issues already caught by linters.
-- If all AC items are ✅, set Overall to APPROVED even with minor observations.
 - A test with no real assertion is always ❌. No exceptions.
+- Calculate score per `## [autoresearch] Scoring Criteria` in CLAUDE.md.
+- Overall must be PASS (≥80) or FAIL (<80). No other values.

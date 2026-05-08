@@ -64,6 +64,41 @@
 ### Frontend
 - [frontend] <lesson>
 
+## [autoresearch] Scoring Criteria
+<!-- Reviewer 综合评分依据。80 分及格。 -->
+
+### Weights
+- AC 验收: 50%
+- 代码质量: 20%
+- 架构约束: 20%
+- 设计一致性: 10%
+
+### Passing Threshold
+- 及格线: 80/100
+- < 80: FAIL → 打回 Coder 修改 → 重新 Review
+
+### Max Review Loops
+- 默认: 10 次
+- 可通过环境变量 `AUTORESEARCH_MAX_REVIEW_LOOPS` 覆盖
+
+### Rules per Dimension
+
+#### AC 验收 (50 分)
+- 通过率 = (通过的 AC 数 / 总 AC 数) × 50
+
+#### 代码质量 (20 分)
+- 函数 ≤ 40 行: 10 分
+- 循环复杂度 ≤ 15: 5 分
+- 无明显重复代码: 5 分
+
+#### 架构约束 (20 分)
+- Core Invariants 遵守: 每条 3 分，最多 10 分
+- Quality Gate Rules 遵守: 每条 2 分，最多 10 分
+
+#### 设计一致性 (10 分)
+- 实现符合 design.md: 5 分
+- 无意外变更: 5 分
+
 ## [autoresearch] Project Architecture
 <!-- 由 /autoresearch:plan 初始化时扫描生成。始终加载。 -->
 <Populated by /autoresearch:plan on first run via codebase scan.>
