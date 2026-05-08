@@ -78,6 +78,30 @@ Flag anything found — do not silently ignore.
 - Does implementation match intended data flow in `design.md`?
 - Unexpected changes outside agreed scope?
 
+### 4. Architecture Invariants Check
+
+Read the `### Architecture Invariants` section from `CLAUDE.md`.
+
+If the section does not exist or is empty → skip and log: `"No architecture invariants defined — skipping."`
+
+For each invariant, inspect the diff for violations:
+- Dependency direction violations (e.g., `models/` importing from `services/`)
+- Layer bypass (e.g., controller calling repository directly)
+- Circular imports introduced
+
+Output a sub-section in `review.md`:
+
+```markdown
+## Architecture Invariants
+
+| Invariant | Status | Evidence |
+|---|---|---|
+| controllers/ must not contain business logic | ✅ | No logic found in controllers/ diff |
+| No circular imports | ❌ | auth/models.py imports auth/services.py (line 12) |
+```
+
+Any ❌ here → set Overall to `NEEDS_WORK` and add to Issues Found with `file:line` reference.
+
 ---
 
 ## Output

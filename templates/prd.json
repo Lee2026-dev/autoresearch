@@ -2,13 +2,32 @@
   {
     "id": "USR-001",
     "title": "Example: implement user registration endpoint",
+    "scope": "backend",
+    "feature_id": "user-auth",
     "done": false,
+    "status": "pending",
     "source": "local",
     "priority": 1,
+    "depends_on": [],
     "acceptance_criteria": [
       "POST /register with valid email+password returns 201 and user ID",
       "Duplicate email returns 409 without creating a user",
       "Password shorter than 8 characters returns 400"
+    ]
+  },
+  {
+    "id": "USR-002",
+    "title": "Example: registration form UI",
+    "scope": "frontend",
+    "feature_id": "user-auth",
+    "done": false,
+    "status": "pending",
+    "source": "local",
+    "priority": 2,
+    "depends_on": ["USR-001"],
+    "acceptance_criteria": [
+      "Form submission redirects to home page on success",
+      "Duplicate email shows inline error message"
     ]
   }
 ]
